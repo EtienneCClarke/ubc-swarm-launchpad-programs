@@ -4,14 +4,14 @@
 resolution = true
 skip-lint = false
 
-[programs]
+[programs.mainnet]
 ubclaunchpad = "4dWhc3nkP4WeQkv7ws4dAxp6sNTBLCuzhTGTf1FynDcf"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "mainnet"
 wallet = "~/.config/solana/upgrade_authority.json"
 
 [scripts]
