@@ -4,7 +4,7 @@
 resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs]
 ubclaunchpad = "4dWhc3nkP4WeQkv7ws4dAxp6sNTBLCuzhTGTf1FynDcf"
 
 [registry]
