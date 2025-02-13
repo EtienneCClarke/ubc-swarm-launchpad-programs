@@ -96,7 +96,7 @@ pub struct ShareListing {
 
 ### Building the program
 
-To build the program we must use a nightly version until this [issue](https://solana.stackexchange.com/questions/17777/unexpected-cfg-condition-value-solana) is resolved.
+First, build the program using a nightly version until this [issue](https://solana.stackexchange.com/questions/17777/unexpected-cfg-condition-value-solana) is resolved.
 
 ```bash
 RUSTUP_TOOLCHAIN="nightly-2024-11-19" anchor build
@@ -104,7 +104,7 @@ RUSTUP_TOOLCHAIN="nightly-2024-11-19" anchor build
 
 ### Deploy to mainnet-beta
 
-To deploy the program add the path to your wallet in your `anchor.toml`.
+To deploy the program, add the path to your wallet in your `anchor.toml`.
 
 It should look like this:
 
