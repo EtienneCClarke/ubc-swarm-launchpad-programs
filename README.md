@@ -102,9 +102,9 @@ First, build the program using a nightly version until this [issue](https://sola
 RUSTUP_TOOLCHAIN="nightly-2024-11-19" anchor build
 ```
 
-### Deploy to mainnet-beta
+### Deploy & Upgrade to mainnet-beta
 
-To deploy the program, add the path to your wallet in your `anchor.toml`.
+First add the path to your wallet in your `anchor.toml`.
 
 It should look like this:
 
@@ -114,8 +114,14 @@ cluster = "Localnet"
 wallet = "~/.config/solana/some_key_pair.json"
 ```
 
-Then use the command
+To deploy a new program use the `anchor deploy` command.
 
 ```bash
 anchor deploy
+```
+
+To upgrade the program use the `anchor upgrade` command.
+
+```bash
+anchor upgrade ./target/deploy/ubclaunchpad.so --program-id 4dWhc3nkP4WeQkv7ws4dAxp6sNTBLCuzhTGTf1FynDcf
 ```
