@@ -125,3 +125,18 @@ To upgrade the program use the `anchor upgrade` command.
 ```bash
 anchor upgrade ./target/deploy/ubclaunchpad.so --program-id 4dWhc3nkP4WeQkv7ws4dAxp6sNTBLCuzhTGTf1FynDcf
 ```
+
+## Working on the project
+
+First, clone the project
+
+```bash
+git clone https://github.com/EtienneCClarke/ubc-swarm-launchpad-programs.git
+cd ubc-swarm-launchpad-programs
+```
+
+Then install dependencies using npm
+
+```bash
+npm install
+```
