@@ -102,7 +102,7 @@ First, build the program using a nightly version until this [issue](https://sola
 RUSTUP_TOOLCHAIN="nightly-2024-11-19" anchor build
 ```
 
-### Deploy & Upgrade to mainnet-beta
+### Deploy or Upgrade to mainnet-beta
 
 First add the path to your wallet in your `anchor.toml`.
 
