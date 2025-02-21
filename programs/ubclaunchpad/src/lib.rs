@@ -698,7 +698,7 @@ pub struct BuyListing<'info> {
 
     #[account(
         mut,
-        associated_token::mint = buyer_token_account,
+        associated_token::mint = token_mint_account,
         associated_token::authority = buyer,
     )]
     pub buyer_token_account: Box<Account<'info, TokenAccount>>,
@@ -731,7 +731,6 @@ pub struct BuyListing<'info> {
     )]
     pub custodial_token_account: Box<Account<'info, TokenAccount>>,
 
-    // Transfer accounts
     pub pool: Box<Account<'info, Pool>>,
 
     #[account(mut)]
@@ -779,7 +778,7 @@ pub struct BuyListingWithLamports<'info> {
 
     /// CHECK: This is the platform account from pool
     #[account(
-        constraint = custodial_account.key() == pool.custodial_account @ ErrorCode::InvalidAuthority
+        constraint = custodial_account.key() == pool.custodial_account.key() @ ErrorCode::InvalidAuthority
     )]
     pub custodial_account: AccountInfo<'info>,
 
