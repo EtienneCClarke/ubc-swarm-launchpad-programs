@@ -282,13 +282,29 @@ pub mod ubclaunchpad {
         let listing = &mut ctx.accounts.share_listing;
         let buyer_shareholder = &mut ctx.accounts.buyer_shareholder;
         let seller_shareholder = &mut ctx.accounts.seller_shareholder;
-        let receiver = &mut ctx.accounts.seller_account;
+        let seller = &mut ctx.accounts.seller_account;
         let pool = &mut ctx.accounts.pool;
 
         // Check seller does not want SOL.
         require!(
             listing.desired_token.to_string() != "11111111111111111111111111111111",
             ErrorCode::InvalidToken
+        );
+
+        // Validate the listing PDA (Done here to reduce stack size)
+        let (expected_listing_pda, _bump) = Pubkey::find_program_address(
+            &[
+                b"listing",
+                pool.key().as_ref(),
+                seller.key().as_ref(),
+                listing.listing_id.as_bytes(),
+            ],
+            ctx.program_id,
+        );
+    
+        require!(
+            listing.key() == expected_listing_pda,
+            ErrorCode::InvalidListingAccount
         );
 
         // Update buyers share counts
@@ -301,6 +317,10 @@ pub mod ubclaunchpad {
             .available_shares
             .checked_add(listing.number_of_shares)
             .ok_or(error!(ErrorCode::InvalidAmount))?;
+
+        // Properly initialise data if buyer is a new shareholder
+        buyer_shareholder.owner = ctx.accounts.buyer.key();
+        buyer_shareholder.pool = pool.key();
 
         // Update sellers share count
         seller_shareholder.shares = seller_shareholder
@@ -344,6 +364,11 @@ pub mod ubclaunchpad {
             fee,
         )?;
 
+        // Close shareholder account if seller has no more shares
+        if seller_shareholder.shares == 0 {
+            seller_shareholder.close(seller.to_account_info())?;
+        }
+
         emit!(BuyListingEvent {
             listing_id: listing.listing_id.to_string(),
             transaction_type: "P2P Sale".to_string(),
@@ -358,8 +383,6 @@ pub mod ubclaunchpad {
             timestamp: Clock::get()?.unix_timestamp,
         });
 
-        // Deactivate the listing
-        listing.close(receiver.to_account_info())?;
 
         Ok(())
     }
@@ -369,13 +392,29 @@ pub mod ubclaunchpad {
         let listing = &mut ctx.accounts.share_listing;
         let buyer_shareholder = &mut ctx.accounts.buyer_shareholder;
         let seller_shareholder = &mut ctx.accounts.seller_shareholder;
-        let receiver = &mut ctx.accounts.seller_account;
+        let seller = &mut ctx.accounts.seller_account;
         let pool = &mut ctx.accounts.pool;
 
         // Check seller wants SOL
         require!(
             listing.desired_token.to_string() == "11111111111111111111111111111111",
             ErrorCode::InvalidToken
+        );
+
+        // Validate the listing PDA (Done here to reduce stack size)
+        let (expected_listing_pda, _bump) = Pubkey::find_program_address(
+            &[
+                b"listing",
+                pool.key().as_ref(),
+                seller.key().as_ref(),
+                listing.listing_id.as_bytes(),
+            ],
+            ctx.program_id,
+        );
+    
+        require!(
+            listing.key() == expected_listing_pda,
+            ErrorCode::InvalidListingAccount
         );
 
         // Update buyers share counts
@@ -388,6 +427,10 @@ pub mod ubclaunchpad {
             .available_shares
             .checked_add(listing.number_of_shares)
             .ok_or(error!(ErrorCode::InvalidAmount))?;
+
+        // Properly initialise data if buyer is a new shareholder
+        buyer_shareholder.owner = ctx.accounts.buyer.key();
+        buyer_shareholder.pool = pool.key();
 
         // Update sellers share count
         seller_shareholder.shares = seller_shareholder
@@ -406,13 +449,13 @@ pub mod ubclaunchpad {
             .ok_or(error!(ErrorCode::InvalidAmount))?;
 
         // Transfer SOL to seller
-        let transfer_to_seller_instruction = anchor_lang::solana_program::system_instruction::transfer(&ctx.accounts.buyer.key(), &receiver.key(), total_cost);
+        let transfer_to_seller_instruction = anchor_lang::solana_program::system_instruction::transfer(&ctx.accounts.buyer.key(), &seller.key(), total_cost);
 
         anchor_lang::solana_program::program::invoke(
             &transfer_to_seller_instruction,
             &[
                 ctx.accounts.buyer.to_account_info(),
-                receiver.to_account_info(),
+                seller.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
             ],
         )?;
@@ -429,6 +472,11 @@ pub mod ubclaunchpad {
             ],
         )?;
 
+        // Close shareholder account if seller has no more shares
+        if seller_shareholder.shares == 0 {
+            seller_shareholder.close(seller.to_account_info())?;
+        }
+
         emit!(BuyListingEvent {
             listing_id: listing.listing_id.to_string(),
             transaction_type: "P2P Sale".to_string(),
@@ -442,9 +490,6 @@ pub mod ubclaunchpad {
             fee: fee,
             timestamp: Clock::get()?.unix_timestamp,
         });
-
-        // Deactivate the listing
-        listing.close(receiver.to_account_info())?;
 
         Ok(())
     }
@@ -670,6 +715,7 @@ pub struct BuyListing<'info> {
         mut,
         constraint = share_listing.seller != buyer.key() @ ErrorCode::CannotPurchaseOwnListing,
         constraint = share_listing.pool == pool.key() @ ErrorCode::InvalidPool,
+        close = seller_account
     )]
     pub share_listing: Box<Account<'info, ShareListing>>,
 
@@ -705,6 +751,7 @@ pub struct BuyListing<'info> {
 
     /// CHECK: This is the seller account that receives funds
     #[account(
+        mut,
         constraint = seller_account.key() == share_listing.seller @ ErrorCode::InvalidAuthority
     )]
     pub seller_account: AccountInfo<'info>,
@@ -719,6 +766,7 @@ pub struct BuyListing<'info> {
 
     /// CHECK: This is the platform account from pool
     #[account(
+        mut,
         constraint = custodial_account.key() == pool.custodial_account @ ErrorCode::InvalidAuthority
     )]
     pub custodial_account: AccountInfo<'info>,
@@ -747,6 +795,7 @@ pub struct BuyListingWithLamports<'info> {
         mut,
         constraint = share_listing.seller != buyer.key() @ ErrorCode::CannotPurchaseOwnListing,
         constraint = share_listing.pool == pool.key() @ ErrorCode::InvalidPool,
+        close = seller_account
     )]
     pub share_listing: Box<Account<'info, ShareListing>>,
 
@@ -772,12 +821,14 @@ pub struct BuyListingWithLamports<'info> {
 
     /// CHECK: This is the seller account that receives funds
     #[account(
+        mut,
         constraint = seller_account.key() == share_listing.seller @ ErrorCode::InvalidAuthority
     )]
     pub seller_account: AccountInfo<'info>,
 
     /// CHECK: This is the platform account from pool
     #[account(
+        mut,
         constraint = custodial_account.key() == pool.custodial_account.key() @ ErrorCode::InvalidAuthority
     )]
     pub custodial_account: AccountInfo<'info>,
@@ -900,4 +951,8 @@ pub enum ErrorCode {
     TooManyShares,
     #[msg("Token not in whitelist")]
     TokenNotWhitelisted,
+    #[msg("Could not initialise new shareholder account")]
+    ShareholderInitialisationFailed,
+    #[msg("Invalid listing account")]
+    InvalidListingAccount,
 }
